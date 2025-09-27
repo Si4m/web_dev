@@ -1,0 +1,55 @@
+*{
+    margin: 0%;
+    padding: 0%;
+
+}
+html,body{
+    height: 100%;
+    width: 100%;
+}
+#main{
+    height: 100%;
+    width: 100%;
+   
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family:Verdana, Geneva, Tahoma, sans-serif
+
+}
+h1{
+
+   font-weight: normal;
+}
+.shape{
+    margin: 10px;
+    height: 200px;
+    width: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    border: 2px solid black;
+}
+#box1:hover{
+    background-color: red;
+}
+#box2:hover{
+    background-color: green;
+
+}
+#box3:hover{
+    background-color: blue;
+}
+#box3{
+    border-radius: 50%;
+
+   
+}
+#box2{
+ rotate: 45deg;
+ margin-top: 50px;
+}
+#box2 h1{
+    rotate: -45deg;
+}

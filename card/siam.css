@@ -1,0 +1,75 @@
+*{
+    margin: 0%;
+    padding: 0%;
+
+}
+html,body{
+    width: 100%;
+    height: 100%;
+
+}
+#main{
+
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: 100%;
+}
+.card{
+
+    position: absolute;
+    height: 350px;
+    width: 250px;
+    border: 2px solid rgb(241, 166, 4);
+    border-radius: 7%;
+    overflow: hidden;
+   
+}
+h1{
+    margin: 5px;
+    color: aqua;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-style: italic;
+   
+}
+#card1{
+    z-index: 4;
+}
+#card2{
+    z-index: 3;
+    rotate: -7deg;
+    
+}
+#card3{
+    z-index: 2;
+    rotate: -14deg;
+}
+#card4{
+    z-index: 1;
+    rotate: -25deg;
+    
+}
+#card1:hover{
+        z-index: 6;
+
+}
+#card2:hover{
+        z-index: 6;
+}
+#card3:hover{
+        z-index: 6;
+}
+#card4:hover{
+        z-index: 6;
+}
+img{
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    
+}
+div{
+    position: sticky;
+}
