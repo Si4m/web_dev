@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --danger: #ef4444;
+      --muted: #6b7280;
+      font-family: "Inter", system-ui, sans-serif;
+    }
+    body {
+      margin:0;
+      background:#f7f9fc;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    header {
+      background:white;
+      padding:16px 24px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    header h1 { font-size:20px; margin:0; }
+    .btn {
+      padding:8px 14px;
+      border-radius:8px;
+      border:0;
+      background:var(--accent);
+      color:white;
+      font-weight:600;
+      cursor:pointer;
+      transition: background .2s;
+    }
+    .btn:hover{background:var(--accent-hover)}
+    .btn-danger{background:var(--danger)}
+    main {
+      flex:1;
+      max-width:1000px;
+      margin:24px auto;
+      padding:0 16px;
+      display:grid;
+      grid-template-columns:2fr 1fr;
+      gap:20px;
+    }
+    .card {
+      background:white;
+      border-radius:12px;
+      padding:20px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom:20px;
+    }
+    h2,h3 { margin-top:0; }
+    .muted { color:var(--muted); font-size:14px; }
+    input,select {
+      width:100%; padding:10px; margin:6px 0;
+      border-radius:8px; border:1px solid #ddd;
+    }
+    .list-item { padding:8px 0; border-bottom:1px solid #eee; }
+    .list-item:last-child { border-bottom:none; }
+    footer { text-align:center; padding:16px; color:var(--muted); font-size:14px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Family Portal Dashboard</h1>
+    <div>
+      <span id="who" class="muted"></span>
+      <button class="btn" id="btnLogout">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <div>
+      <!-- Links -->
+      <div class="card">
+        <h2>Learning Links</h2>
+        <div id="linksList" class="muted">(loading…)</div>
+      </div>
+
+      <!-- Add Link (admin only) -->
+      <div class="card" id="addLinkCard" style="display:none">
+        <h3>Add Link</h3>
+        <input id="linkTitle" placeholder="Title" />
+        <input id="linkHref" placeholder="https://…" />
+        <button class="btn" id="btnAddLink">Add</button>
+      </div>
+    </div>
+
+    <div>
+      <!-- Users (admin only) -->
+      <div class="card" id="usersCard" style="display:none">
+        <h3>Users</h3>
+        <div id="usersList" class="muted">(loading…)</div>
+      </div>
+
+      <!-- Add User (admin only) -->
+      <div class="card" id="addUserCard" style="display:none">
+        <h3>Add User</h3>
+        <input id="regUser" placeholder="Email" />
+        <input id="regPass" type="password" placeholder="Password" />
+        <select id="regRole">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn" id="btnRegister">Create</button>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="card" id="dangerCard" style="display:none">
+        <h3 style="color:var(--danger)">Danger Zone</h3>
+        <button class="btn btn-danger" id="btnReset">Reset Portal</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>© Family Portal Prototype</footer>
+
+<script>
+function getToken(){ return localStorage.getItem('token'); }
+function authHeaders(){ const t=getToken(); return t? {'Authorization':'Bearer '+t}:{ }; }
+async function api(path, opts={}) {
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{}, authHeaders());
+  if(opts.body) opts.body = JSON.stringify(opts.body);
+  const res = await fetch('/api'+path, opts);
+  if(!res.ok) throw await res.json().catch(()=>({error:'error'}));
+  return res.json();
+}
+
+async function loadSession(){
+  try{
+    const me = await api('/me');
+    document.getElementById('who').innerText = me.name+' ('+me.role+')';
+    loadLinks();
+    if(me.role==='admin'){
+      document.getElementById('usersCard').style.display='block';
+      document.getElementById('addUserCard').style.display='block';
+      document.getElementById('addLinkCard').style.display='block';
+      document.getElementById('dangerCard').style.display='block';
+      loadUsers();
+    }
+  }catch(e){
+    localStorage.removeItem('token');
+    window.location.href='/login.html';
+  }
+}
+
+async function loadLinks(){
+  const el=document.getElementById('linksList');
+  try{
+    const links=await api('/links');
+    if(!links.length){ el.innerText='(no links yet)'; return }
+    el.innerHTML=links.map(l=>`<div class="list-item"><a href="${l.href}" target="_blank">${l.title}</a></div>`).join('');
+  }catch(e){ el.innerText='Failed to load links'; }
+}
+
+async function loadUsers(){
+  const el=document.getElementById('usersList');
+  try{
+    const users=await api('/users');
+    if(!users.length){ el.innerText='(no users)'; return }
+    el.innerHTML=users.map(u=>`<div class="list-item">${u.name} (${u.role})
+      <button class="btn btn-danger" style="padding:4px 8px;font-size:12px" onclick="revoke(${u.id})">Revoke</button></div>`).join('');
+  }catch(e){ el.innerText='Failed to load users'; }
+}
+
+async function revoke(id){
+  if(!confirm('Revoke this user?')) return;
+  await api('/users/'+id,{method:'DELETE'});
+  loadUsers();
+}
+
+document.getElementById('btnAddLink').onclick=async()=>{
+  const title=document.getElementById('linkTitle').value.trim();
+  const href=document.getElementById('linkHref').value.trim();
+  if(!title||!href) return alert('Missing');
+  await api('/links',{method:'POST',body:{title,href}});
+  loadLinks();
+  document.getElementById('linkTitle').value='';
+  document.getElementById('linkHref').value='';
+};
+
+document.getElementById('btnRegister').onclick=async()=>{
+  const name=document.getElementById('regUser').value.trim();
+  const pass=document.getElementById('regPass').value;
+  const role=document.getElementById('regRole').value;
+  if(!name||!pass) return alert('Missing');
+  await api('/register',{method:'POST',body:{name,password:pass,role}});
+  loadUsers();
+  document.getElementById('regUser').value='';
+  document.getElementById('regPass').value='';
+};
+
+document.getElementById('btnReset').onclick=async()=>{
+  if(!confirm('Reset portal?')) return;
+  await api('/reset',{method:'POST'});
+  loadUsers(); loadLinks();
+};
+
+document.getElementById('btnLogout').onclick=()=>{ localStorage.removeItem('token'); window.location.href='/login.html'; };
+
+loadSession();
+</script>
+</body>
+</html>

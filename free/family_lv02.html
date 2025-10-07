@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Family Learning Portal — Prototype</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;}
+    body{max-width:900px;margin:28px auto;padding:18px;color:#111;background:#f7f8fb}
+    header{display:flex;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    .card{background:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(20,30,50,.06);padding:18px;margin-top:16px}
+    label{display:block;margin:10px 0 6px;font-weight:600}
+    input[type=text],input[type=password]{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd}
+    button{padding:10px 12px;border-radius:8px;border:0;background:#2563eb;color:white;font-weight:600;cursor:pointer}
+    .muted{color:#666;font-size:13px}
+    nav{display:flex;gap:8px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+    .user{padding:10px;border-radius:8px;border:1px solid #eee;margin-bottom:8px}
+    .danger{background:#fff3f2;color:#b91c1c;border:1px solid #ffd6d5}
+    footer{margin-top:18px;color:#666;font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Family Learning Portal — Prototype</h1>
+    <nav><div class="muted">Local prototype</div></nav>
+  </header>
+
+  <section class="card">
+    <strong>Note:</strong>
+    <div class="muted">এটা কেবল ডেমো। ডেটা localStorage এ রাখা হয়। Production ব্যবহারের আগে server-side auth ব্যবহার করবেন।</div>
+  </section>
+
+  <div class="grid">
+    <div>
+      <!-- Login -->
+      <section class="card">
+        <h3>Loge In</h3>
+        <div id="loginArea">
+          <label for="loginUser">Username/Email</label>
+          <input id="loginUser" type="text" placeholder="example@family.com" />
+          <label for="loginPass">Password</label>
+          <input id="loginPass" type="password" placeholder="password" />
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button id="btnLogin">Log in</button>
+            <button id="btnShowRegister" style="background:#10b981">Register</button>
+            <div id="loginMsg" class="muted"></div>
+          </div>
+        </div>
+
+        <div id="memberArea" style="display:none;margin-top:12px">
+          <div class="muted">Logged in as <strong id="who"></strong></div>
+          <div style="margin-top:10px">
+            <button id="btnLogout" style="background:#ef4444">Logout</button>
+          </div>
+          <hr style="margin:12px 0"/>
+          <h4>Learning Links</h4>
+          <div id="linksList" class="muted">(No links yet)</div>
+        </div>
+      </section>
+
+      <!-- Register (Admin only) -->
+      <section class="card" id="registerCard" style="display:none;margin-top:14px">
+        <h3>Register new family user</h3>
+        <label for="regUser">Username / Email</label>
+        <input id="regUser" type="text" />
+        <label for="regPass">Password</label>
+        <input id="regPass" type="password" />
+        <label for="regRole">Role</label>
+        <select id="regRole" style="padding:8px;border-radius:8px">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="btnRegister">Create user</button>
+          <button id="btnCancelReg" style="background:#9ca3af">Cancel</button>
+          <div id="regMsg" class="muted"></div>
+        </div>
+      </section>
+
+      <!-- Add Link (Admin only) -->
+      <section class="card" id="addLinkCard" style="margin-top:14px;display:none">
+        <h3>Admin — Add learning link</h3>
+        <label for="linkTitle">Title</label>
+        <input id="linkTitle" type="text" placeholder="Course on JavaScript" />
+        <label for="linkHref">URL</label>
+        <input id="linkHref" type="text" placeholder="https://www.udemy.com/...." />
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="btnAddLink">Add link</button>
+          <div id="addLinkMsg" class="muted"></div>
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <!-- Users (Admin only) -->
+      <section class="card" id="asideUsers" style="display:none">
+        <h4>Users</h4>
+        <div id="usersList" class="muted">(no users)</div>
+      </section>
+
+      <!-- Danger Zone (Admin only) -->
+      <section class="card" style="margin-top:12px;display:none" id="asideDanger">
+        <h4>Danger Zone</h4>
+        <div class="danger">
+          <p class="muted">Remove all users / reset portal</p>
+          <button id="btnReset" style="background:#b91c1c">Reset portal</button>
+          <div id="resetMsg" class="muted"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer><small>Prototype only.</small></footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    async function sha256hex(text){
+      const enc = new TextEncoder();
+      const data = enc.encode(text);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    const KEY_USERS='familyportal_users', KEY_LINKS='familyportal_links';
+
+    function loadUsers(){try{return JSON.parse(localStorage.getItem(KEY_USERS)||'[]')}catch{return []}}
+    function saveUsers(u){localStorage.setItem(KEY_USERS,JSON.stringify(u))}
+    function loadLinks(){try{return JSON.parse(localStorage.getItem(KEY_LINKS)||'[]')}catch{return []}}
+    function saveLinks(l){localStorage.setItem(KEY_LINKS,JSON.stringify(l))}
+
+    function getSession(){try{return JSON.parse(sessionStorage.getItem('session')||'null')}catch{return null}}
+    function setSession(obj){sessionStorage.setItem('session',JSON.stringify(obj))}
+    function clearSession(){sessionStorage.removeItem('session')}
+
+    function renderUsers(){
+      const users=loadUsers(); const el=$('usersList'); el.innerHTML='';
+      if(users.length===0){el.innerText='(no users)';return}
+      const s=getSession(), isAdmin=s&&s.role==='admin';
+      users.forEach(u=>{
+        const div=document.createElement('div'); div.className='user';
+        div.innerHTML=`<strong>${u.name}</strong><div class=\"muted\">role: ${u.role}</div>`;
+        if(isAdmin){
+          const b=document.createElement('button'); b.innerText='Revoke'; b.style.background='#ef4444';
+          b.onclick=()=>{removeUser(u.name)};
+          div.appendChild(b);
+        }
+        el.appendChild(div);
+      });
+    }
+    function renderLinks(){
+      const links=loadLinks(); const el=$('linksList'); el.innerHTML='';
+      if(links.length===0){el.innerText='(No links yet)';return}
+      links.forEach(l=>{
+        const a=document.createElement('a'); a.href=l.href; a.target='_blank'; a.innerText=l.title;
+        el.appendChild(document.createElement('div')).appendChild(a);
+      });
+    }
+    async function createUser(name,pass,role){
+      if(!name||!pass)throw'Empty';
+      const users=loadUsers(); if(users.find(u=>u.name===name))throw'Exists';
+      const hash=await sha256hex(pass); users.push({name,hash,role}); saveUsers(users); renderUsers();
+    }
+    function removeUser(name){
+      const s=getSession(); if(!s||s.role!=='admin'){alert('Only admin');return}
+      let users=loadUsers().filter(u=>u.name!==name); saveUsers(users); renderUsers();
+    }
+    async function login(name,pass){
+      const u=loadUsers().find(u=>u.name===name); if(!u)throw'notfound';
+      const h=await sha256hex(pass); if(h!==u.hash)throw'badpass'; setSession({name:u.name,role:u.role});
+    }
+
+    function resetPortal(){
+      const s=getSession(); if(!s||s.role!=='admin'){alert('Only admin');return}
+      if(confirm('Reset all?')){localStorage.removeItem(KEY_USERS);localStorage.removeItem(KEY_LINKS);renderUsers();renderLinks()}
+    }
+
+    window.addEventListener('load',()=>{
+      renderUsers(); renderLinks();
+      if(loadUsers().length===0){
+        sha256hex('admin123').then(h=>{
+          saveUsers([{name:'admin@local',hash:h,role:'admin'}]); renderUsers();
+        });
+      }
+      const s=getSession();
+      if(s){
+        $('loginArea').style.display='none'; $('memberArea').style.display='block'; $('who').innerText=s.name+' ('+s.role+')';
+        if(s.role==='admin'){ $('registerCard').style.display='block'; $('addLinkCard').style.display='block'; $('asideUsers').style.display='block'; $('asideDanger').style.display='block'; }
+      }
+      $('btnLogin').onclick=async()=>{try{await login($('loginUser').value,$('loginPass').value);location.reload()}catch(e){alert('Login failed')}};
+      $('btnLogout').onclick=()=>{clearSession();location.reload()};
+      $('btnShowRegister').onclick=()=>{const s=getSession(); if(s&&s.role==='admin')$('registerCard').style.display='block'; else alert('Only admin')};
+      $('btnCancelReg').onclick=()=>{$('registerCard').style.display='none'};
+      $('btnRegister').onclick=async()=>{const s=getSession(); if(!s||s.role!=='admin'){alert('Only admin');return} try{await createUser($('regUser').value,$('regPass').value,$('regRole').value);alert('Created')}catch(e){alert('Error')}};
+      $('btnAddLink').onclick=()=>{const s=getSession(); if(!s||s.role!=='admin'){alert('Only admin');return} addLink($('linkTitle').value,$('linkHref').value);renderLinks()};
+      function addLink(t,h){const links=loadLinks();links.push({title:t,href:h});saveLinks(links)}
+      $('btnReset').onclick=()=>resetPortal();
+    });
+  </script>
+</body>
+</html>
